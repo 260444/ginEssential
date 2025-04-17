@@ -1,1 +1,2 @@
-###A
+###编译
+go build && ./ginEssential.exe
