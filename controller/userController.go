@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/260444/ginEssential/common"
@@ -44,13 +43,56 @@ func Register(ctx *gin.Context) {
 		})
 		return
 	}
+	// 创建用户
 	newuser := model.User{
 		Name:     name,
 		Telphone: telphone,
 		Password: password,
 	}
-	DB.Create(&newuser) // 插入数据
-	log.Printf("用户名%v,密码%v,手机号:%v", name, password, telphone)
+	// 插入数据
+	DB.Create(&newuser)
+	// 返回结果
+	ctx.JSON(200, gin.H{
+		"msg": "注册成功",
+	})
+}
+
+func Login(ctx *gin.Context) {
+	// 获取数据库连接
+	DB := common.GetDB()
+	// 获取参数
+	telphone := ctx.PostForm("telphone")
+	password := ctx.PostForm("password")
+	//数据验证
+	if len(telphone) != 11 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+			"code": 422,
+			"msg":  "手机号长度必须为11位",
+		})
+		return
+	}
+	if len(password) < 6 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+			"code": 422,
+			"msg":  "密码长度不能小于6位",
+		})
+		return
+	}
+	// 判断手机号是否存在
+	var user model.User
+	DB.Where("telphone = ?", telphone).First(&user)
+	if user.ID == 0 {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+			"code": 422,
+			"msg":  "用户不存在",
+		})
+		return
+
+	}
+	// 判断密码是否正确
+
+	// 发放token
+
 	// 返回结果
 	ctx.JSON(200, gin.H{
 		"msg": "注册成功",
