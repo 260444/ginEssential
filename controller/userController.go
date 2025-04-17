@@ -1,12 +1,14 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/260444/ginEssential/common"
 	"github.com/260444/ginEssential/model"
 	"github.com/260444/ginEssential/util"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -44,16 +46,27 @@ func Register(ctx *gin.Context) {
 		return
 	}
 	// 创建用户
+
+	hashdPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500,
+			"msg":  "加密错误",
+		})
+		return
+	}
+
 	newuser := model.User{
 		Name:     name,
 		Telphone: telphone,
-		Password: password,
+		Password: string(hashdPassword),
 	}
 	// 插入数据
 	DB.Create(&newuser)
 	// 返回结果
 	ctx.JSON(200, gin.H{
-		"msg": "注册成功",
+		"code": 200,
+		"msg":  "注册成功",
 	})
 }
 
@@ -90,12 +103,37 @@ func Login(ctx *gin.Context) {
 
 	}
 	// 判断密码是否正确
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"code": 400,
+			"msg":  "密码错误",
+		})
+		return
+	}
 
 	// 发放token
-
+	token, err := common.ReleaseToken(user)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500,
+			"msg":  "系统错误",
+		})
+		log.Printf("token generate error: %v", err)
+		return
+	}
 	// 返回结果
 	ctx.JSON(200, gin.H{
-		"msg": "注册成功",
+		"code": 200,
+		"msg":  "登录成功",
+		"data": gin.H{"token": token},
+	})
+}
+
+func Info(ctx *gin.Context) {
+	user, _ := ctx.Get("user")
+	ctx.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"data": gin.H{"user": user},
 	})
 }
 
